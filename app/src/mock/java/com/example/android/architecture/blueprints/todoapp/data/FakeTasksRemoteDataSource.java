@@ -34,6 +34,10 @@ public class FakeTasksRemoteDataSource implements TasksDataSource {
 
     private static FakeTasksRemoteDataSource INSTANCE;
 
+    /*
+    LinkedHashMap区别于HashMap最大的一个不同点是，前者是有序的，而后者是无序的。
+    为此，LinkedHashMap增加了两个属性用于保证顺序，分别是双向链表头结点header和标志位accessOrder。
+    * */
     private static final Map<String, Task> TASKS_SERVICE_DATA = new LinkedHashMap<>();
 
     // Prevent direct instantiation.
