@@ -54,7 +54,6 @@ public class TasksPresenter implements TasksContract.Presenter {
         mTasksRepository = checkNotNull(tasksRepository, "tasksRepository cannot be null");
         mTasksView = checkNotNull(tasksView, "tasksView cannot be null!");
 
-        // fixme 这个地方不好理解
         mTasksView.setPresenter(this);
     }
 
