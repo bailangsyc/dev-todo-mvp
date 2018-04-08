@@ -49,6 +49,9 @@ public interface TasksContract {
          */
         void showTasks(List<Task> tasks);
 
+        /**
+         * 显示添加任务的页面
+         */
         void showAddTask();
 
         void showTaskDetailsUi(String taskId);

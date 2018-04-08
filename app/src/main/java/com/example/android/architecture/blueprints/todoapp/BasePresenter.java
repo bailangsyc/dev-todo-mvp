@@ -18,6 +18,9 @@ package com.example.android.architecture.blueprints.todoapp;
 
 public interface BasePresenter {
 
+    /**
+     * 一般在View的onCreate 或者onResume调用，用做初始化
+     */
     void start();
 
 }
