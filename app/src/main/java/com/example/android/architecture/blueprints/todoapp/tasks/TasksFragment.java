@@ -354,6 +354,10 @@ public class TasksFragment extends Fragment implements TasksContract.View {
         return isAdded();
     }
 
+    /**
+     * 内部类最好设置为static 可以防止内存泄漏
+     * 因为内部类持有了外部类的引用
+     */
     private static class TasksAdapter extends BaseAdapter {
 
         private List<Task> mTasks;

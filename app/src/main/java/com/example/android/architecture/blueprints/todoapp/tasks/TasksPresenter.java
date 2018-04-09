@@ -40,6 +40,7 @@ public class TasksPresenter implements TasksContract.Presenter {
 
     private final TasksContract.View mTasksView;
 
+    //默认情况下显示所有的任务
     private TasksFilterType mCurrentFiltering = TasksFilterType.ALL_TASKS;
 
     private boolean mFirstLoad = true;
@@ -83,6 +84,7 @@ public class TasksPresenter implements TasksContract.Presenter {
      */
     private void loadTasks(boolean forceUpdate, final boolean showLoadingUI) {
         if (showLoadingUI) {
+            //显示加载指示器的动画
             mTasksView.setLoadingIndicator(true);
         }
         if (forceUpdate) {
@@ -106,6 +108,7 @@ public class TasksPresenter implements TasksContract.Presenter {
                 }
 
                 // We filter the tasks based on the requestType
+                //显示不同情况的界面： 完成的 未完成的， 所有的
                 for (Task task : tasks) {
                     switch (mCurrentFiltering) {
                         case ALL_TASKS:

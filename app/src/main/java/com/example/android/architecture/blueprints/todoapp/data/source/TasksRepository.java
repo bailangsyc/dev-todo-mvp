@@ -103,10 +103,12 @@ public class TasksRepository implements TasksDataSource {
         }
 
         if (mCacheIsDirty) {
+            //如果本地数据是无效的那么请求远程数据
             // If the cache is dirty we need to fetch new data from the network.
             getTasksFromRemoteDataSource(callback);
         } else {
             // Query the local storage if available. If not, query the network.
+            //从本地存储的数据库中查询
             mTasksLocalDataSource.getTasks(new LoadTasksCallback() {
                 @Override
                 public void onTasksLoaded(List<Task> tasks) {
@@ -284,6 +286,9 @@ public class TasksRepository implements TasksDataSource {
                 callback.onTasksLoaded(new ArrayList<>(mCachedTasks.values()));
             }
 
+            /**
+             * 当远程数据加载无效后回调此方法
+             */
             @Override
             public void onDataNotAvailable() {
                 callback.onDataNotAvailable();
