@@ -96,7 +96,8 @@ public class TasksRepository implements TasksDataSource {
     public void getTasks(@NonNull final LoadTasksCallback callback) {
         checkNotNull(callback);
 
-        // Respond immediately with cache if available and not dirty
+        // Respond immediately with cache if available and not dirty（污染，肮脏）
+        //如果缓存的数据 是有效的那么立即返回
         if (mCachedTasks != null && !mCacheIsDirty) {
             callback.onTasksLoaded(new ArrayList<>(mCachedTasks.values()));
             return;

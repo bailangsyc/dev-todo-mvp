@@ -164,4 +164,90 @@ mAddTaskView.setPresenter(this);
   mPresenter.start();
  ```
 
+在taskPresenter中调用  loadTasks(false);
+```java
+   public void start() {
+        loadTasks(false);
+    }
+```
 
+判断是否是第一次加载，如果是第一次加载则请求网络，如果不是第一次加载，则从本地取出数据
+```java
+    public void loadTasks(boolean forceUpdate) {
+        // Simplification for sample: a network reload will be forced on first load.
+        loadTasks(forceUpdate || mFirstLoad, true);
+        mFirstLoad = false;
+    }
+
+ ```
+
+ 然后在loadTasks(boolean forceUpdate, final boolean showLoadingUI)中执行了哪些操作呢
+ 首先显示加载的动画，然后根据需要刷新数据库中的task，接下来就是重点， 通过mTasksRepository提供的
+ 接口getTasks(@NonNull final LoadTasksCallback callback)采用回调的方式来获取task列表。
+这里就是presenter层与mode层进行交互
+
+ ```java
+在taskPresenter中调用
+   mTasksRepository.getTasks(new TasksDataSource.LoadTasksCallback() {
+             @Override
+             public void onTasksLoaded(List<Task> tasks) {
+                ......
+                 }
+                 // The view may not be able to handle UI updates anymore
+                 if (!mTasksView.isActive()) {
+                     return;
+                 }
+                 if (showLoadingUI) {
+                     mTasksView.setLoadingIndicator(false);
+                 }
+             }
+
+ ```
+
+  在  onTasksLoaded(List<Task> tasks)的回调方法中获取到任务列表，然后根据不同情况（所有，未完成，
+  已完成）通过mTasksView 显示不同的列表
+  ```java
+      private void processTasks(List<Task> tasks) {
+          if (tasks.isEmpty()) {
+              // Show a message indicating there are no tasks for that filter type.
+              processEmptyTasks();
+          } else {
+              // Show the list of tasks
+              mTasksView.showTasks(tasks);
+              // Set the filter label's text.
+              showFilterLabel();
+          }
+      }
+
+  ```
+
+
+  --------
+
+ ## 接下来分析mode层的相关操作
+分析 TasksRepository 中的方法 getTasks(@NonNull final LoadTasksCallback callback)
+
+// todo 以下待整理  如何模拟从远程获取数据，和如何从数据库中取出数据，这里有待明天研究还有单元测试的问题
+这个方法中的逻辑如下：
+这里的逻辑还是有待梳理
+
+首先判断本地的缓存数据是否有效，如果有效的话直接取出
+```java
+      if (mCachedTasks != null && !mCacheIsDirty) {
+            callback.onTasksLoaded(new ArrayList<>(mCachedTasks.values()));
+            return;
+        }
+```
+如果没有效，那么获取远程数据
+如果有效的话，从本地数据库中获取
+```java
+
+if (mCacheIsDirty) {
+            //如果本地数据是无效的那么请求远程数据
+            // If the cache is dirty we need to fetch new data from the network.
+            getTasksFromRemoteDataSource(callback);
+        } else {
+            // Query the local storage if available. If not, query the network.
+            //从本地存储的数据库中查询
+            mTasksLocalDataSource.getTasks(new LoadTasksCallback()
+```

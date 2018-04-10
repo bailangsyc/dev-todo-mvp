@@ -74,6 +74,7 @@ public class TasksPresenter implements TasksContract.Presenter {
     @Override
     public void loadTasks(boolean forceUpdate) {
         // Simplification for sample: a network reload will be forced on first load.
+        //forceUpdate || mFirstLoad看不懂  作用就是第一次强制性联网获取数据 fixme
         loadTasks(forceUpdate || mFirstLoad, true);
         mFirstLoad = false;
     }
@@ -88,6 +89,7 @@ public class TasksPresenter implements TasksContract.Presenter {
             mTasksView.setLoadingIndicator(true);
         }
         if (forceUpdate) {
+            //刷新数据库中的task fixme
             mTasksRepository.refreshTasks();
         }
 
