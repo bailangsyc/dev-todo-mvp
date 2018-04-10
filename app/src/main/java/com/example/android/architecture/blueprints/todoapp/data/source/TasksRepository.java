@@ -117,6 +117,9 @@ public class TasksRepository implements TasksDataSource {
                     callback.onTasksLoaded(new ArrayList<>(mCachedTasks.values()));
                 }
 
+                /**
+                 * 获取本地数据失败后再获取远程数据
+                 */
                 @Override
                 public void onDataNotAvailable() {
                     getTasksFromRemoteDataSource(callback);

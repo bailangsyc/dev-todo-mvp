@@ -19,7 +19,7 @@
 │   │   ├── TasksDataSource.java
 │   │   └── TasksRepository.java
 │   └── Task.java
-├── statistics  //详情界面
+├── statistics  //统计页面
 │   ├── StatisticsActivity.java
 │   ├── StatisticsContract.java
 │   ├── StatisticsFragment.java
@@ -287,6 +287,7 @@ Implementation of a remote data source with static access to the data for easy t
     }
 ```
 
+这里边的数据是如何通过本地进行模拟测试的，暂时不懂
 TASKS_SERVICE_DATA 是一个 LinkedHashMap，这个map中维护了一个task列表
 
 ### TasksRepository 对象如何从本地获取数据
@@ -460,7 +461,7 @@ taskDao() 在 TodoDateBase中是一个抽象方法，它的子类 ToDoDatabase_I
 ```
 
 在构造中传入了 RoomDatabase 实例,也就是刚才的 todoDateBase，然后创建了许多 SharedSQLiteStatement 用来对收据库进行增删改查的操作。
-
+有关room如何进行建表插入数据，这牵扯到room的使用，具体还有待研究。
 #### 以插入task进行分析
 EntityDeletionOrUpdateAdapter 的 createQuery()中，初始化 insert 语句，
 
