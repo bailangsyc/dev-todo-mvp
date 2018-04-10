@@ -1,7 +1,7 @@
 官方mvp架构学习
 [Android MVP 架构一 View与Presenter](https://blog.csdn.net/qiyei2009/article/details/68943089)这篇博客介绍的不错。
 
-## 目录结构
+##     目录结构
 
 ```bash
 .
