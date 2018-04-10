@@ -227,11 +227,12 @@ mAddTaskView.setPresenter(this);
  ## 接下来分析mode层的相关操作
 分析 TasksRepository 中的方法 getTasks(@NonNull final LoadTasksCallback callback)
 
-// todo 以下待整理  如何模拟从远程获取数据，和如何从数据库中取出数据，这里有待明天研究还有单元测试的问题
+
+
 这个方法中的逻辑如下：
 这里的逻辑还是有待梳理
 
-首先判断本地的缓存数据是否有效，如果有效的话直接取出
+首先判断本地的缓存数据是否过期（有效），如果不过期的话直接取出
 ```java
       if (mCachedTasks != null && !mCacheIsDirty) {
             callback.onTasksLoaded(new ArrayList<>(mCachedTasks.values()));
@@ -241,13 +242,226 @@ mAddTaskView.setPresenter(this);
 如果没有效，那么获取远程数据
 如果有效的话，从本地数据库中获取
 ```java
-
 if (mCacheIsDirty) {
             //如果本地数据是无效的那么请求远程数据
             // If the cache is dirty we need to fetch new data from the network.
             getTasksFromRemoteDataSource(callback);
-        } else {
+  } else {
             // Query the local storage if available. If not, query the network.
             //从本地存储的数据库中查询
             mTasksLocalDataSource.getTasks(new LoadTasksCallback()
 ```
+
+
+### TasksRepository 对象如何从远程获取数据
+首先自己的 getTasksFromRemoteDataSource(callback); 中调用mTasksRemoteDataSource.getTasks，同时
+new一个回调LoadTasksCallback传递给mTasksRemoteDataSource。在成功的回调中刷新缓存与本地数据库，同时TaskPresenter.getTask()传递
+的callBack调用成功的回调
+```java
+  private void getTasksFromRemoteDataSource(@NonNull final LoadTasksCallback callback) {
+        mTasksRemoteDataSource.getTasks(new LoadTasksCallback() {
+            @Override
+            public void onTasksLoaded(List<Task> tasks) {
+            refreshCache(tasks);
+            refreshLocalDataSource(tasks);
+            }
+
+         }
+      }
+```
+
+那么 mTasksRemoteDataSource.getTasks(new LoadTasksCallback()）如何实现呢？可以参考
+FakeTasksRemoteDataSource 的getTasks(@NonNull LoadTasksCallback callback)
+
+FakeTasksRemoteDataSource 中通过在本地伪造一个测试的数据来模拟远程请求，见类的注释，同时也实现了TasksDataSource接口
+
+```java
+Implementation of a remote data source with static access to the data for easy testing.
+```
+
+
+```java
+   @Override
+    public void getTasks(@NonNull LoadTasksCallback callback) {
+        callback.onTasksLoaded(Lists.newArrayList(TASKS_SERVICE_DATA.values()));
+    }
+```
+
+TASKS_SERVICE_DATA 是一个 LinkedHashMap，这个map中维护了一个task列表
+
+### TasksRepository 对象如何从本地获取数据
+ mTasksLocalDataSource.getTasks(new LoadTasksCallback()）
+下边的分析都是在 TasksLocalDataSource中
+源码如下：
+
+```java
+    public void getTasks(@NonNull final LoadTasksCallback callback) {
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                //通过 mTasksDao对象从数据库中取出task列表
+                final List<Task> tasks = mTasksDao.getTasks();
+                mAppExecutors.mainThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (tasks.isEmpty()) {
+                            // This will be called if the table is new or just empty.
+                            callback.onDataNotAvailable();
+                        } else {
+                            callback.onTasksLoaded(tasks);
+                        }
+                    }
+                });
+            }
+        };
+
+        mAppExecutors.diskIO().execute(runnable);
+    }
+```
+
+ mTasksDao 如何从数据库中取出task列表呢？
+ mTasksDao是通过 mTasksLocalDataSource 构造传入的。
+
+mTasksLocalDataSource 是在Injection中获取的实例。
+```java
+public class Injection {
+
+    public static TasksRepository provideTasksRepository(@NonNull Context context) {
+        checkNotNull(context);
+        ToDoDatabase database = ToDoDatabase.getInstance(context);
+
+        //TasksRepository : 任务仓库 此处充当mode数据层 包括本地数据和远程数据
+        return TasksRepository.getInstance(FakeTasksRemoteDataSource.getInstance(),
+                TasksLocalDataSource.getInstance(new AppExecutors(),
+                //获取到了taskdao对象
+                        database.taskDao()));
+    }
+}
+```
+
+
+taskDao() 在 TodoDateBase中是一个抽象方法，它的子类 ToDoDatabase_Impl,在这个类中创建一个taskDao（TasksDao_Impl），
+
+```java
+  @Override
+  public TasksDao taskDao() {
+    if (_tasksDao != null) {
+      return _tasksDao;
+    } else {
+    //加了一个锁
+      synchronized(this) {
+        if(_tasksDao == null) {
+       // 如果 _tasksDao 为null的话，创建一个_tasksDao对象
+          _tasksDao = new TasksDao_Impl(this);
+        }
+        return _tasksDao;
+      }
+    }
+  }
+```
+
+### TasksDao_Impl
+它实现了TasksDao 接口。
+
+构造方法如下：
+```java
+  public TasksDao_Impl(RoomDatabase __db) {
+    this.__db = __db;
+    this.__insertionAdapterOfTask = new EntityInsertionAdapter<Task>(__db) {
+      @Override
+      public String createQuery() {
+        return "INSERT OR REPLACE INTO `tasks`(`entryid`,`title`,`description`,`completed`) VALUES (?,?,?,?)";
+      }
+
+      @Override
+      public void bind(SupportSQLiteStatement stmt, Task value) {
+        if (value.getId() == null) {
+          stmt.bindNull(1);
+        } else {
+          stmt.bindString(1, value.getId());
+        }
+        if (value.getTitle() == null) {
+          stmt.bindNull(2);
+        } else {
+          stmt.bindString(2, value.getTitle());
+        }
+        if (value.getDescription() == null) {
+          stmt.bindNull(3);
+        } else {
+          stmt.bindString(3, value.getDescription());
+        }
+        final int _tmp;
+        _tmp = value.isCompleted() ? 1 : 0;
+        stmt.bindLong(4, _tmp);
+      }
+    };
+    this.__updateAdapterOfTask = new EntityDeletionOrUpdateAdapter<Task>(__db) {
+      @Override
+      public String createQuery() {
+        return "UPDATE OR ABORT `tasks` SET `entryid` = ?,`title` = ?,`description` = ?,`completed` = ? WHERE `entryid` = ?";
+      }
+
+      @Override
+      public void bind(SupportSQLiteStatement stmt, Task value) {
+        if (value.getId() == null) {
+          stmt.bindNull(1);
+        } else {
+          stmt.bindString(1, value.getId());
+        }
+        if (value.getTitle() == null) {
+          stmt.bindNull(2);
+        } else {
+          stmt.bindString(2, value.getTitle());
+        }
+        if (value.getDescription() == null) {
+          stmt.bindNull(3);
+        } else {
+          stmt.bindString(3, value.getDescription());
+        }
+        final int _tmp;
+        _tmp = value.isCompleted() ? 1 : 0;
+        stmt.bindLong(4, _tmp);
+        if (value.getId() == null) {
+          stmt.bindNull(5);
+        } else {
+          stmt.bindString(5, value.getId());
+        }
+      }
+    };
+    this.__preparedStmtOfUpdateCompleted = new SharedSQLiteStatement(__db) {
+      @Override
+      public String createQuery() {
+        final String _query = "UPDATE tasks SET completed = ? WHERE entryid = ?";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfDeleteTaskById = new SharedSQLiteStatement(__db) {
+      @Override
+      public String createQuery() {
+        final String _query = "DELETE FROM Tasks WHERE entryid = ?";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfDeleteTasks = new SharedSQLiteStatement(__db) {
+      @Override
+      public String createQuery() {
+        final String _query = "DELETE FROM Tasks";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfDeleteCompletedTasks = new SharedSQLiteStatement(__db) {
+      @Override
+      public String createQuery() {
+        final String _query = "DELETE FROM Tasks WHERE completed = 1";
+        return _query;
+      }
+    };
+  }
+```
+
+在构造中传入了 RoomDatabase 实例,也就是刚才的 todoDateBase，然后创建了许多 SharedSQLiteStatement 用来对收据库进行增删改查的操作。
+
+#### 以插入task进行分析
+EntityDeletionOrUpdateAdapter 的 createQuery()中，初始化 insert 语句，
+
+createQuery()在什么时候调用，目前还不是很清楚。

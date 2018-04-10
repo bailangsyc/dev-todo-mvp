@@ -59,7 +59,7 @@ public class TasksLocalDataSource implements TasksDataSource {
     }
 
     /**
-     * Note: {@link LoadTasksCallback#onDataNotAvailable()} is fired if the database doesn't exist
+     * Note: {@link LoadTasksCallback#onDataNotAvailable()} is fired(开火，此处为调用) if the database doesn't exist
      * or the table is empty.
      */
     @Override
@@ -67,6 +67,7 @@ public class TasksLocalDataSource implements TasksDataSource {
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
+                //通过 mTasksDao对象从数据库中取出task列表
                 final List<Task> tasks = mTasksDao.getTasks();
                 mAppExecutors.mainThread().execute(new Runnable() {
                     @Override

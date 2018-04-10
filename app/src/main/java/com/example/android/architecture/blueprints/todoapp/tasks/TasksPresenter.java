@@ -89,7 +89,7 @@ public class TasksPresenter implements TasksContract.Presenter {
             mTasksView.setLoadingIndicator(true);
         }
         if (forceUpdate) {
-            //刷新数据库中的task fixme
+            //将mTasksRepository mCacheIsDirty的值修改为true  fixme 将缓存的数据的状态修改为无效（过期）
             mTasksRepository.refreshTasks();
         }
 

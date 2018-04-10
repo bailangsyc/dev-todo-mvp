@@ -50,7 +50,7 @@ public class TasksRepository implements TasksDataSource {
     Map<String, Task> mCachedTasks;
 
     /**
-     * Marks the cache as invalid, to force an update the next time data is requested. This variable
+     * Marks the cache as invalid（无效）, to force an update the next time data is requested. This variable
      * has package local visibility so it can be accessed from tests.
      */
     boolean mCacheIsDirty = false;
@@ -97,7 +97,7 @@ public class TasksRepository implements TasksDataSource {
         checkNotNull(callback);
 
         // Respond immediately with cache if available and not dirty（污染，肮脏）
-        //如果缓存的数据 是有效的那么立即返回
+        //如果缓存的数据 是不过期的那么立即返回
         if (mCachedTasks != null && !mCacheIsDirty) {
             callback.onTasksLoaded(new ArrayList<>(mCachedTasks.values()));
             return;
@@ -297,6 +297,10 @@ public class TasksRepository implements TasksDataSource {
         });
     }
 
+    /**
+     * 刷新本地缓存的任务
+     * @param tasks
+     */
     private void refreshCache(List<Task> tasks) {
         if (mCachedTasks == null) {
             mCachedTasks = new LinkedHashMap<>();
@@ -305,7 +309,7 @@ public class TasksRepository implements TasksDataSource {
         for (Task task : tasks) {
             mCachedTasks.put(task.getId(), task);
         }
-        mCacheIsDirty = false;
+        mCacheIsDirty = false;//将缓存状态标记为不过期
     }
 
     private void refreshLocalDataSource(List<Task> tasks) {
